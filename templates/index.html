@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDMT Ticketing System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="app-shell">
+        {% include 'header.html' %}
+
+        <div class="layout">
+            {% include 'sidebar.html' %}
+            <main class="content">
+                <div class="content-header">
+                    <h1>Ticket Dashboard</h1>
+                    <p class="subtitle">View and manage all support tickets</p>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" id="ticket-filters" onsubmit="return false;">
+                            <div class="col-md-6 col-lg-8">
+                                <label for="ticket-search" class="form-label">Search tickets</label>
+                                <input
+                                    type="search"
+                                    id="ticket-search"
+                                    class="form-control"
+                                    placeholder="Search by ticket no., store, subject, JO, or assignee"
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <div class="col-md-3 col-lg-2">
+                                <label for="ticket-status-filter" class="form-label">Status</label>
+                                <select id="ticket-status-filter" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Ongoing">Ongoing</option>
+                                    <option value="Complete">Complete</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 col-lg-2">
+                                <label class="form-label d-block">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-secondary w-100" id="ticket-filters-clear">
+                                    Clear
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {% if entries %}
+                    <div class="card" id="tickets">
+                        <div class="card-header">
+                            <h2>All Tickets</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ticket No.</th>
+                                            <th>Store Name</th>
+                                            <th>JO</th>
+                                            <th>Subject</th>
+                                            <th>IT</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in entries %}
+                                        {% set status_val = (entry.status or entry.Status or 'pending')|lower %}
+                                        {% if status_val == 'complete' or status_val == 'completed' %}
+                                            {% set status_label = 'Complete' %}
+                                            {% set status_class = 'status-complete' %}
+                                            {% set status_icon = 'bi-check-circle-fill' %}
+                                        {% elif status_val == 'ongoing' or status_val == 'in progress' or status_val == 'in_progress' %}
+                                            {% set status_label = 'Ongoing' %}
+                                            {% set status_class = 'status-ongoing' %}
+                                            {% set status_icon = 'bi-arrow-repeat' %}
+                                        {% else %}
+                                            {% set status_label = 'Pending' %}
+                                            {% set status_class = 'status-pending' %}
+                                            {% set status_icon = 'bi-clock-fill' %}
+                                        {% endif %}
+                                        {# Derive fields from legacy combined assigned_it text if needed #}
+                                        {% set raw_assigned_it = entry.assigned_it or '' %}
+                                        {% set parsed_contact = '—' %}
+                                        {% set parsed_assignee = '—' %}
+
+                                        {% if not entry.contact_number and raw_assigned_it %}
+                                            {% set lines = raw_assigned_it.split('\n') %}
+                                            {% for line in lines %}
+                                                {% set l = line.strip() %}
+                                                {% if l.startswith('Contact:') and parsed_contact == '—' %}
+                                                    {% set parsed_contact = l[8:]|trim %}
+                                                {% elif l.startswith('Assigned to:') and parsed_assignee == '—' %}
+                                                    {% set parsed_assignee = l[12:]|trim %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+
+                                        {% if entry.contact_number %}
+                                            {% set display_contact = entry.contact_number %}
+                                        {% else %}
+                                            {% set display_contact = parsed_contact %}
+                                        {% endif %}
+
+                                        {# Prefer explicit email if available, otherwise fall back to phone #}
+                                        {% set display_email = entry.email or entry.Email or '' %}
+
+                                        {% if entry.assigned_it %}
+                                            {% if parsed_assignee != '—' %}
+                                                {% set display_assignee = parsed_assignee %}
+                                            {% else %}
+                                                {% set display_assignee = entry.assigned_it %}
+                                            {% endif %}
+                                        {% else %}
+                                            {% set display_assignee = entry.Email or entry.email or '—' %}
+                                        {% endif %}
+
+                                        {% set ticket_concern = entry.reported_concern
+                                            or entry.reportedConcern
+                                            or entry.concern
+                                            or entry.details
+                                            or entry.description
+                                            or entry.assigned_it
+                                            or '' %}
+
+                                        <tr class="ticket-row"
+                                            data-ticket-id="{{ entry.ticket_no or entry.id or '' }}"
+                                            data-store-name="{{ entry.store_name or entry.Name or '' }}"
+                                            data-jo="{{ entry.job_order or entry.remedy or '' }}"
+                                            data-subject="{{ entry.subject or entry.Concern or entry.concern or '' }}"
+                                            data-assignee="{{ display_assignee or '' }}"
+                                            data-status-label="{{ status_label }}"
+                                            data-status-class="{{ status_class }}"
+                                            data-date="{{ entry.date or entry.created_at or '' }}"
+                                            data-email="{{ display_email or '' }}"
+                                            data-contact="{{ display_contact or '' }}"
+                                            data-concern="{{ ticket_concern }}">
+                                            <td><span class="ticket-id">{{ entry.ticket_no or entry.id or '—' }}</span></td>
+                                            <td>
+                                                <div>{{ entry.store_name or entry.Name or '—' }}</div>
+                                                {% if display_email or (display_contact and display_contact != '—') %}
+                                                    <div class="store-contact-subline">
+                                                        {{ display_email or display_contact }}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ entry.job_order or entry.remedy or '—' }}</td>
+                                            <td><span class="subject-text">{{ entry.subject or entry.Concern or entry.concern or '—' }}</span></td>
+                                            <td>{{ display_assignee or '—' }}</td>
+                                            <td>
+                                                <span class="status-badge {{ status_class }}">
+                                                    <i class="bi {{ status_icon }}"></i>
+                                                    {{ status_label }}
+                                                </span>
+                                            </td>
+                                            <td>{{ entry.date or entry.created_at or '—' }}</td>
+                                            <td class="table-actions">
+                                                <a href="{{ url_for('edit_ticket', ticket_id=(entry.ticket_no or entry.id)) }}"
+                                                   class="icon-button icon-button-edit"
+                                                   title="Edit ticket">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                <form method="post"
+                                                      action="{{ url_for('delete_ticket', ticket_id=(entry.ticket_no or entry.id)) }}"
+                                                      style="display:inline;"
+                                                      onsubmit="return confirm('Are you sure you want to delete ticket #{{ entry.ticket_no or entry.id }} from {{ entry.store_name or entry.Name }}?\\n\\nSubject: {{ entry.subject or entry.Concern or entry.concern }}\\n\\nThis action cannot be undone.');">
+                                                    <button type="submit"
+                                                            class="icon-button icon-button-delete"
+                                                            title="Delete ticket">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card empty-state" id="tickets">
+                        <div class="card-body">
+                            <h2>No entries found</h2>
+                            <p>Once tickets are created, they will appear here.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <div id="ticket-modal-overlay" class="ticket-modal-overlay">
+        <div class="ticket-modal">
+            <div class="ticket-modal-header">
+                <div class="ticket-modal-title-group">
+                    <h2 id="ticket-modal-subject">Ticket details</h2>
+                    <p id="ticket-modal-store" class="ticket-modal-store"></p>
+                </div>
+                <button type="button" class="ticket-modal-close" data-ticket-modal-close>&times;</button>
+            </div>
+            <div class="ticket-modal-body">
+                <dl class="ticket-modal-grid">
+                    <div>
+                        <dt>Ticket No.</dt>
+                        <dd id="ticket-modal-id"></dd>
+                    </div>
+                    <div>
+                        <dt>Status</dt>
+                        <dd>
+                            <span id="ticket-modal-status" class="ticket-modal-status">
+                                <span id="ticket-modal-status-badge" class="status-badge status-pending">
+                                    <span id="ticket-modal-status-text">Pending</span>
+                                </span>
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Assigned to</dt>
+                        <dd id="ticket-modal-assignee"></dd>
+                    </div>
+                    <div>
+                        <dt>Date</dt>
+                        <dd id="ticket-modal-date"></dd>
+                    </div>
+                    <div>
+                        <dt>JO</dt>
+                        <dd id="ticket-modal-jo"></dd>
+                    </div>
+                    <div>
+                        <dt>Contact</dt>
+                        <dd id="ticket-modal-contact"></dd>
+                    </div>
+                    <div>
+                        <dt>Email</dt>
+                        <dd id="ticket-modal-email"></dd>
+                    </div>
+                </dl>
+                <div class="ticket-modal-section">
+                    <h3 class="ticket-modal-section-title">Reported concern</h3>
+                    <p id="ticket-modal-concern" class="ticket-modal-concern"></p>
+                </div>
+                <div class="ticket-modal-footer text-end">
+                    <a id="ticket-modal-print" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline-danger">
+                        <i class="bi bi-download"></i>
+                        Download / Print Job Order
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const overlay = document.getElementById('ticket-modal-overlay');
+            const subjectEl = document.getElementById('ticket-modal-subject');
+            const storeEl = document.getElementById('ticket-modal-store');
+            const idEl = document.getElementById('ticket-modal-id');
+            const statusBadgeEl = document.getElementById('ticket-modal-status-badge');
+            const statusTextEl = document.getElementById('ticket-modal-status-text');
+            const assigneeEl = document.getElementById('ticket-modal-assignee');
+            const dateEl = document.getElementById('ticket-modal-date');
+            const joEl = document.getElementById('ticket-modal-jo');
+            const contactEl = document.getElementById('ticket-modal-contact');
+            const emailEl = document.getElementById('ticket-modal-email');
+            const concernEl = document.getElementById('ticket-modal-concern');
+
+            function openModalFromRow(row) {
+                if (!row) return;
+
+                const id = row.dataset.ticketId || '—';
+                const store = row.dataset.storeName || '—';
+                const subject = row.dataset.subject || '—';
+                const statusLabel = row.dataset.statusLabel || 'Pending';
+                const statusClass = row.dataset.statusClass || 'status-pending';
+                const assignee = row.dataset.assignee || '—';
+                const date = row.dataset.date || '—';
+                const jo = row.dataset.jo || '—';
+                const contact = row.dataset.contact || '—';
+                const email = row.dataset.email || '—';
+                const concern = row.dataset.concern || '—';
+
+                subjectEl.textContent = subject;
+                storeEl.textContent = store ? store : 'No store name';
+                idEl.textContent = id;
+                assigneeEl.textContent = assignee;
+                dateEl.textContent = date;
+                joEl.textContent = jo;
+                contactEl.textContent = contact;
+                emailEl.textContent = email;
+                concernEl.textContent = concern;
+
+                statusBadgeEl.className = 'status-badge ' + statusClass;
+                statusTextEl.textContent = statusLabel;
+
+                var printLink = document.getElementById('ticket-modal-print');
+                if (printLink) {
+                    printLink.href = '/tickets/' + (id || row.dataset.ticketId) + '/job-order';
+                }
+
+                overlay.classList.add('is-visible');
+                document.body.classList.add('ticket-modal-open');
+            }
+
+            function closeModal() {
+                overlay.classList.remove('is-visible');
+                document.body.classList.remove('ticket-modal-open');
+            }
+
+            document.querySelectorAll('.ticket-row').forEach(function (row) {
+                row.addEventListener('click', function (event) {
+                    if (event.target.closest('.table-actions') || event.target.closest('a') || event.target.closest('button')) {
+                        return;
+                    }
+                    openModalFromRow(row);
+                });
+            });
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    closeModal();
+                }
+            });
+
+            document.querySelectorAll('[data-ticket-modal-close]').forEach(function (btn) {
+                btn.addEventListener('click', closeModal);
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && overlay.classList.contains('is-visible')) {
+                    closeModal();
+                }
+            });
+
+            const ticketRows = Array.from(document.querySelectorAll('.ticket-row'));
+            const searchInput = document.getElementById('ticket-search');
+            const statusSelect = document.getElementById('ticket-status-filter');
+            const clearButton = document.getElementById('ticket-filters-clear');
+
+            function normalize(value) {
+                return (value || '').toString().toLowerCase();
+            }
+
+            function applyTicketFilters() {
+                const query = normalize(searchInput ? searchInput.value : '');
+                const selectedStatus = statusSelect ? statusSelect.value : '';
+
+                ticketRows.forEach(function (row) {
+                    const statusLabel = row.dataset.statusLabel || '';
+
+                    const haystack = [
+                        row.dataset.ticketId,
+                        row.dataset.storeName,
+                        row.dataset.jo,
+                        row.dataset.subject,
+                        row.dataset.assignee,
+                        row.dataset.date,
+                        row.dataset.email,
+                        row.dataset.contact,
+                        row.dataset.concern
+                    ].map(normalize).join(' ');
+
+                    const matchesQuery = !query || haystack.includes(query);
+                    const matchesStatus = !selectedStatus || statusLabel === selectedStatus;
+
+                    const shouldShow = matchesQuery && matchesStatus;
+                    row.style.display = shouldShow ? '' : 'none';
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyTicketFilters);
+            }
+
+            if (statusSelect) {
+                statusSelect.addEventListener('change', applyTicketFilters);
+            }
+
+            if (clearButton) {
+                clearButton.addEventListener('click', function () {
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    if (statusSelect) {
+                        statusSelect.value = '';
+                    }
+                    applyTicketFilters();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

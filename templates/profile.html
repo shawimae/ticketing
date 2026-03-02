@@ -1,0 +1,157 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile • JDMT Ticketing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="app-shell">
+        {% include 'header.html' %}
+
+        <div class="layout">
+            {% include 'sidebar.html' %}
+
+            <main class="content">
+                <div class="content-header">
+                    <h1>Profile</h1>
+                    <p class="subtitle">{{ user.email }}</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        {% if error %}
+                        <div class="alert alert-danger mb-3">{{ error }}</div>
+                        {% endif %}
+
+                        <form method="POST" id="profileForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="first_name" class="form-label">First Name</label>
+                                        <input type="text" class="form-control" id="first_name" name="first_name" 
+                                               value="{{ user.first_name or '' }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="last_name" class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" id="last_name" name="last_name" 
+                                               value="{{ user.last_name or '' }}" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" 
+                                               value="{{ user.email or '' }}" readonly disabled>
+                                        <div class="form-text">Email cannot be changed here. Contact administrator if needed.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="role" class="form-label">Role</label>
+                                        <input type="text" class="form-control" id="role" name="role" 
+                                               value="{{ user.role or '' }}" readonly disabled>
+                                        <div class="form-text">Role assigned by administrator.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h5 class="mb-3">Change Password</h5>
+                            <p class="text-muted mb-3">Leave blank if you don't want to change your password.</p>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="current_password" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="current_password" name="current_password">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="new_password" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="new_password" name="new_password" 
+                                               minlength="6">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                               minlength="6">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check"></i> Update Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        const currentPassword = document.getElementById('current_password').value;
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        // Check if user is attempting to change password
+        if (currentPassword || newPassword || confirmPassword) {
+            if (!currentPassword) {
+                alert('Current password is required to change your password.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!newPassword || !confirmPassword) {
+                alert('New password and confirmation are required to change your password.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('New password and confirmation do not match.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters long.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Confirmation dialog for password change
+            const confirmChange = confirm(
+                'Are you sure you want to change your password?\\n\\n' +
+                'This will update your login credentials for the system.\\n\\n' +
+                'Make sure you remember your new password.'
+            );
+            
+            if (!confirmChange) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+</script>
+</body>
+</html>

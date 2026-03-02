@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - JDMT Ticketing System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="app-shell">
+        {% include 'header.html' %}
+
+        <div class="layout layout-center">
+            <main class="content narrow">
+                <div class="content-centered-inner">
+                    <div class="content-header">
+                        <h1>Create your account</h1>
+                        <p class="subtitle">Register to manage and track JDMT support tickets.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            {% with messages = get_flashed_messages(with_categories=true) %}
+                                {% if messages %}
+                                    <div class="mb-3">
+                                        {% for category, message in messages %}
+                                            <div class="alert alert-{{ 'success' if category == 'success' else 'info' if category == 'info' else 'danger' }} mb-2">
+                                                {{ message }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+
+                            {% if error %}
+                                <div class="alert alert-danger mb-3">
+                                    {{ error }}
+                                </div>
+                            {% endif %}
+
+                            <form method="post" class="form" novalidate>
+                                <div class="form-grid-2">
+                                    <div class="form-field">
+                                        <label for="first_name">First name</label>
+                                        <input
+                                            type="text"
+                                            id="first_name"
+                                            name="first_name"
+                                            value="{{ request.form.get('first_name', '') }}"
+                                            required
+                                        >
+                                    </div>
+
+                                    <div class="form-field">
+                                        <label for="last_name">Last name</label>
+                                        <input
+                                            type="text"
+                                            id="last_name"
+                                            name="last_name"
+                                            value="{{ request.form.get('last_name', '') }}"
+                                            required
+                                        >
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="email">Email</label>
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        value="{{ request.form.get('email', '') }}"
+                                        autocomplete="email"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="password">Password</label>
+                                    <input
+                                        type="password"
+                                        id="password"
+                                        name="password"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="confirm_password">Confirm password</label>
+                                    <input
+                                        type="password"
+                                        id="confirm_password"
+                                        name="confirm_password"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="primary-button full-width">
+                                    Create account
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <p class="auth-secondary-text">
+                        Already have an account?
+                        <a href="{{ url_for('login') }}" class="link-inline">Sign in</a>
+                    </p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

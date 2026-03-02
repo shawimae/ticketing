@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backups • JDMT Ticketing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="app-shell">
+        {% include 'header.html' %}
+
+        <div class="layout">
+            {% include 'sidebar.html' %}
+
+            <main class="content">
+                <div class="content-header">
+                    <h1>Backups</h1>
+                    <p class="subtitle">Filter tickets by day and export them as CSV</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header card-header-flex">
+                        <div>
+                            <h2>Ticket backups</h2>
+                            <p class="subtitle mb-0">Export daily snapshots or the full ticket archive.</p>
+                        </div>
+                        {% if selected_date %}
+                            <span class="pill pill-muted">
+                                <i class="bi bi-calendar-event"></i>
+                                {{ selected_date }}
+                            </span>
+                        {% else %}
+                            <span class="pill pill-muted pill-subtle">
+                                <i class="bi bi-calendar"></i>
+                                Choose a date
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="backup-layout">
+                            <section class="backup-filters">
+                                <h2 class="backup-section-title">Filter by date</h2>
+                                <p class="backup-section-subtitle">
+                                    Pick a specific day to see all tickets for that period and export them as CSV.
+                                </p>
+                                <form method="get" action="{{ url_for('backups') }}" class="row g-3 align-items-end mt-1">
+                                    <div class="col-md-5 col-lg-4">
+                                        <label for="date" class="form-label">Select date</label>
+                                        <input
+                                            type="date"
+                                            id="date"
+                                            name="date"
+                                            class="form-control"
+                                            value="{{ selected_date or '' }}"
+                                            required
+                                        >
+                                    </div>
+                                    <div class="col-md-7 col-lg-5">
+                                        <button type="submit" class="btn btn-primary mt-2 me-2">
+                                            <i class="bi bi-funnel"></i>
+                                            Filter
+                                        </button>
+
+                                        {% if selected_date %}
+                                            <a
+                                                href="{{ url_for('backups', date=selected_date, download=1) }}"
+                                                class="btn btn-outline-secondary mt-2 {% if not entries %}disabled{% endif %}"
+                                                {% if not entries %}aria-disabled="true"{% endif %}
+                                            >
+                                                <i class="bi bi-download"></i>
+                                                Download CSV
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </form>
+
+                                {% if filter_error %}
+                                    <div class="alert alert-danger mt-3">
+                                        {{ filter_error }}
+                                    </div>
+                                {% endif %}
+                            </section>
+
+                            <section class="backup-meta">
+                                <div class="backup-meta-header">
+                                    <div class="backup-meta-icon">
+                                        <i class="bi bi-cloud-arrow-down-fill"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="backup-meta-title">Full ticket backup</h2>
+                                        <p class="backup-meta-text">
+                                            Export a CSV containing <strong>all tickets</strong> in the system,
+                                            ideal for offline storage and reporting.
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href="{{ url_for('backups', all=1, download=1) }}"
+                                    class="btn btn-outline-dark w-100 backup-meta-action"
+                                >
+                                    <i class="bi bi-archive"></i>
+                                    Download all tickets (CSV)
+                                </a>
+                                <div class="backup-meta-footnote">
+                                    {% if selected_date %}
+                                        {% if entries %}
+                                            {{ entries|length }} ticket(s) currently match {{ selected_date }}.
+                                        {% else %}
+                                            No tickets found for {{ selected_date }} yet.
+                                        {% endif %}
+                                    {% else %}
+                                        Select a date on the left to preview matching tickets and enable a focused CSV export.
+                                    {% endif %}
+                                </div>
+                            </section>
+                        </div>
+
+                        {% if selected_date %}
+                            <div class="mt-4">
+                                <h2 class="h5 mb-2">Results for {{ selected_date }}</h2>
+
+                                {% if entries %}
+                                    <p class="text-muted mb-3">
+                                        {{ entries|length }} ticket(s) found for this day.
+                                    </p>
+                                    <div class="table-wrapper">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ticket No.</th>
+                                                    <th>Store Name</th>
+                                                    <th>Contact Number</th>
+                                                    <th>Subject</th>
+                                                    <th>IT</th>
+                                                    <th>Status</th>
+                                                    <th>Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for entry in entries %}
+                                                {% set status_val = (entry.status or entry.Status or 'pending')|lower %}
+                                                {% if status_val == 'complete' or status_val == 'completed' %}
+                                                    {% set status_label = 'Complete' %}
+                                                    {% set status_class = 'status-complete' %}
+                                                    {% set status_icon = 'bi-check-circle-fill' %}
+                                                {% elif status_val == 'ongoing' or status_val == 'in progress' or status_val == 'in_progress' %}
+                                                    {% set status_label = 'Ongoing' %}
+                                                    {% set status_class = 'status-ongoing' %}
+                                                    {% set status_icon = 'bi-arrow-repeat' %}
+                                                {% else %}
+                                                    {% set status_label = 'Pending' %}
+                                                    {% set status_class = 'status-pending' %}
+                                                    {% set status_icon = 'bi-clock-fill' %}
+                                                {% endif %}
+
+                                                {% set raw_assigned_it = entry.assigned_it or '' %}
+                                                {% set parsed_contact = '—' %}
+                                                {% set parsed_assignee = '—' %}
+
+                                                {% if not entry.contact_number and raw_assigned_it %}
+                                                    {% set lines = raw_assigned_it.split('\n') %}
+                                                    {% for line in lines %}
+                                                        {% set l = line.strip() %}
+                                                        {% if l.startswith('Contact:') and parsed_contact == '—' %}
+                                                            {% set parsed_contact = l[8:]|trim %}
+                                                        {% elif l.startswith('Assigned to:') and parsed_assignee == '—' %}
+                                                            {% set parsed_assignee = l[12:]|trim %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+
+                                                {% if entry.contact_number %}
+                                                    {% set display_contact = entry.contact_number %}
+                                                {% else %}
+                                                    {% set display_contact = parsed_contact %}
+                                                {% endif %}
+
+                                                {% if entry.assigned_it %}
+                                                    {% if parsed_assignee != '—' %}
+                                                        {% set display_assignee = parsed_assignee %}
+                                                    {% else %}
+                                                        {% set display_assignee = entry.assigned_it %}
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% set display_assignee = entry.Email or entry.email or '—' %}
+                                                {% endif %}
+
+                                                <tr>
+                                                    <td><span class="ticket-id">{{ entry.ticket_no or entry.id or '—' }}</span></td>
+                                                    <td>{{ entry.store_name or entry.Name or '—' }}</td>
+                                                    <td>{{ display_contact or '—' }}</td>
+                                                    <td><span class="subject-text">{{ entry.subject or entry.Concern or entry.concern or '—' }}</span></td>
+                                                    <td>{{ display_assignee or '—' }}</td>
+                                                    <td>
+                                                        <span class="status-badge {{ status_class }}">
+                                                            <i class="bi {{ status_icon }}"></i>
+                                                            {{ status_label }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ entry.date or entry.created_at or '—' }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted mt-3">
+                                        No tickets found for this day.
+                                    </p>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted mt-3">
+                                Choose a date to see all tickets for that day and enable CSV download, or use the full backup above.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

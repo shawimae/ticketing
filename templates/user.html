@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Management • JDMT Ticketing</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      {% include 'header.html' %}
+
+      <div class="layout">
+        {% include 'sidebar.html' %}
+
+        <main class="content">
+          <div
+            class="content-header d-flex flex-wrap justify-content-between align-items-center gap-2"
+          >
+            <div>
+              <h1>User Management</h1>
+              <p class="subtitle">Manage application users and roles</p>
+            </div>
+            <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+              <i class="bi bi-person-plus"></i> Add user
+            </a>
+          </div>
+
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %}
+          <div class="mb-3">
+            {% for category, message in messages %}
+            <div
+              class="alert alert-{{ 'success' if category == 'success' else 'info' if category == 'info' else 'danger' }} mb-2"
+            >
+              {{ message }}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %} {% endwith %}
+
+          <div class="row g-4">
+            {% for u in users %}
+            <div class="col-md-6 col-lg-4">
+              <div class="card user-card h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-start mb-3">
+                    <div class="user-avatar me-3">
+                      <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h5 class="card-title mb-1">
+                        {{ u.first_name }} {{ u.last_name }}
+                      </h5>
+                      <p class="card-text text-muted small mb-2">
+                        {{ u.email }}
+                      </p>
+                      <div class="mb-2">
+                        {% if u.role == 'super_admin' %}
+                        <span class="badge bg-danger role-badge">
+                          <i class="bi bi-shield-fill-exclamation me-1"></i>Super Admin
+                        </span>
+                        {% elif u.role == 'admin' %}
+                        <span class="badge bg-primary role-badge">
+                          <i class="bi bi-shield-fill me-1"></i>Admin
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary role-badge">
+                          <i class="bi bi-person-fill me-1"></i>End User
+                        </span>
+                        {% endif %}
+                      </div>
+                      <div class="mb-3">
+                        {% if u.is_active %}
+                        <span class="badge bg-success status-badge">
+                          <i class="bi bi-circle-fill me-1"></i>Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark status-badge">
+                          <i class="bi bi-circle me-1"></i>Inactive
+                        </span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2 mt-auto">
+                    <a
+                      href="{{ url_for('edit_user', user_id=u.id) }}"
+                      class="btn btn-sm btn-outline-primary flex-grow-1"
+                    >
+                      <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    {% if u.id != session.get('user_id') %}
+                    {% set role_display = 'Super Admin' if u.role == 'super_admin' else ('Admin' if u.role == 'admin' else 'End User') %}
+                    <form
+                      method="post"
+                      action="{{ url_for('delete_user', user_id=u.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Are you sure you want to delete user {{ u.first_name }} {{ u.last_name }} ({{ u.email }})?\\n\\nRole: {{ role_display }}\\n\\nThis action cannot be undone and will remove all access for this user.');"
+                    >
+                      <button
+                        type="submit"
+                        class="btn btn-sm btn-outline-danger"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+              <div class="text-center py-5">
+                <i class="bi bi-people text-muted" style="font-size: 3rem"></i>
+                <p class="text-muted mt-3">No users to show.</p>
+                <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+                  <i class="bi bi-person-plus"></i> Add your first user
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

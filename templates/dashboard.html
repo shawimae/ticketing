@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard • JDMT Ticketing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-shell">
+        {% include 'header.html' %}
+
+        <div class="layout">
+            {% include 'sidebar.html' %}
+
+            <main class="content">
+                <div class="content-header">
+                    <h1>Dashboard</h1>
+                    <p class="subtitle">High-level overview of your ticketing system</p>
+                </div>
+
+                <div class="analytics-grid">
+                    <section class="card analytics-card">
+                        <div class="card-header">
+                            <h2>Tickets by Status</h2>
+                            <p class="card-subtitle">Distribution of pending, ongoing, and completed tickets</p>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="statusChart" aria-label="Tickets by status" role="img"></canvas>
+                        </div>
+                    </section>
+
+                    <section class="card analytics-card">
+                        <div class="card-header">
+                            <h2>Tickets by Store</h2>
+                            <p class="card-subtitle">Top stores by number of tickets raised</p>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="storeChart" aria-label="Tickets by store" role="img"></canvas>
+                        </div>
+                    </section>
+
+                    <section class="card analytics-card analytics-card-wide">
+                        <div class="card-header">
+                            <h2>Tickets Over Time</h2>
+                            <p class="card-subtitle">Ticket creation trend by day</p>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="timeChart" aria-label="Tickets over time" role="img"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div id="ticket-modal-overlay" class="ticket-modal-overlay">
+        <div class="ticket-modal">
+            <div class="ticket-modal-header">
+                <div class="ticket-modal-title-group">
+                    <h2 id="ticket-modal-subject">Ticket details</h2>
+                    <p id="ticket-modal-store" class="ticket-modal-store"></p>
+                </div>
+                <button type="button" class="ticket-modal-close" data-ticket-modal-close>&times;</button>
+            </div>
+            <div class="ticket-modal-body">
+                <dl class="ticket-modal-grid">
+                    <div>
+                        <dt>Ticket No.</dt>
+                        <dd id="ticket-modal-id"></dd>
+                    </div>
+                    <div>
+                        <dt>Status</dt>
+                        <dd>
+                            <span id="ticket-modal-status" class="ticket-modal-status">
+                                <span id="ticket-modal-status-badge" class="status-badge status-pending">
+                                    <span id="ticket-modal-status-text">Pending</span>
+                                </span>
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Assigned to</dt>
+                        <dd id="ticket-modal-assignee"></dd>
+                    </div>
+                    <div>
+                        <dt>Date</dt>
+                        <dd id="ticket-modal-date"></dd>
+                    </div>
+                    <div>
+                        <dt>JO</dt>
+                        <dd id="ticket-modal-jo"></dd>
+                    </div>
+                    <div>
+                        <dt>Contact</dt>
+                        <dd id="ticket-modal-contact"></dd>
+                    </div>
+                    <div>
+                        <dt>Email</dt>
+                        <dd id="ticket-modal-email"></dd>
+                    </div>
+                </dl>
+                <div class="ticket-modal-section">
+                    <h3 class="ticket-modal-section-title">Reported concern</h3>
+                    <p id="ticket-modal-concern" class="ticket-modal-concern"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="application/json" id="dashboard-data">{{ { "status_counts": status_counts, "tickets_by_date": tickets_by_date, "tickets_by_store": tickets_by_store } | tojson }}</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const overlay = document.getElementById('ticket-modal-overlay');
+            const subjectEl = document.getElementById('ticket-modal-subject');
+            const storeEl = document.getElementById('ticket-modal-store');
+            const idEl = document.getElementById('ticket-modal-id');
+            const statusBadgeEl = document.getElementById('ticket-modal-status-badge');
+            const statusTextEl = document.getElementById('ticket-modal-status-text');
+            const assigneeEl = document.getElementById('ticket-modal-assignee');
+            const dateEl = document.getElementById('ticket-modal-date');
+            const joEl = document.getElementById('ticket-modal-jo');
+            const contactEl = document.getElementById('ticket-modal-contact');
+            const emailEl = document.getElementById('ticket-modal-email');
+            const concernEl = document.getElementById('ticket-modal-concern');
+
+            function openModalFromRow(row) {
+                if (!row) return;
+
+                const id = row.dataset.ticketId || '—';
+                const store = row.dataset.storeName || '—';
+                const subject = row.dataset.subject || '—';
+                const statusLabel = row.dataset.statusLabel || 'Pending';
+                const statusClass = row.dataset.statusClass || 'status-pending';
+                const assignee = row.dataset.assignee || '—';
+                const date = row.dataset.date || '—';
+                const jo = row.dataset.jo || '—';
+                const contact = row.dataset.contact || '—';
+                const email = row.dataset.email || '—';
+                const concern = row.dataset.concern || '—';
+
+                subjectEl.textContent = subject;
+                storeEl.textContent = store ? store : 'No store name';
+                idEl.textContent = id;
+                assigneeEl.textContent = assignee;
+                dateEl.textContent = date;
+                joEl.textContent = jo;
+                contactEl.textContent = contact;
+                emailEl.textContent = email;
+                concernEl.textContent = concern;
+
+                statusBadgeEl.className = 'status-badge ' + statusClass;
+                statusTextEl.textContent = statusLabel;
+
+                overlay.classList.add('is-visible');
+                document.body.classList.add('ticket-modal-open');
+            }
+
+            function closeModal() {
+                overlay.classList.remove('is-visible');
+                document.body.classList.remove('ticket-modal-open');
+            }
+
+            document.querySelectorAll('.ticket-row').forEach(function (row) {
+                row.addEventListener('click', function (event) {
+                    if (event.target.closest('.table-actions') || event.target.closest('a') || event.target.closest('button')) {
+                        return;
+                    }
+                    openModalFromRow(row);
+                });
+            });
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    closeModal();
+                }
+            });
+
+            document.querySelectorAll('[data-ticket-modal-close]').forEach(function (btn) {
+                btn.addEventListener('click', closeModal);
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && overlay.classList.contains('is-visible')) {
+                    closeModal();
+                }
+            });
+
+            // Analytics charts (data from server via JSON script)
+            const dashboardData = JSON.parse(document.getElementById('dashboard-data').textContent);
+            const statusData = dashboardData.status_counts || {};
+            const ticketsByDate = dashboardData.tickets_by_date || {};
+            const ticketsByStore = dashboardData.tickets_by_store || {};
+
+            // Tickets by status (doughnut)
+            const statusCtx = document.getElementById('statusChart');
+            if (statusCtx && Object.keys(statusData).length) {
+                new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusData),
+                        datasets: [{
+                            data: Object.values(statusData),
+                            backgroundColor: [
+                                '#198754', // Pending
+                                '#0d6efd', // Ongoing
+                                '#ffc107'  // Complete
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Tickets by store (bar) - top 10
+            const storeCtx = document.getElementById('storeChart');
+            const storeEntries = Object.entries(ticketsByStore)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            if (storeCtx && storeEntries.length) {
+                const storeLabels = storeEntries.map(([name]) => name);
+                const storeCounts = storeEntries.map(([, count]) => count);
+                new Chart(storeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: storeLabels,
+                        datasets: [{
+                            label: 'Tickets',
+                            data: storeCounts,
+                            backgroundColor: '#0d6efd'
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 0,
+                                    autoSkip: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            // Tickets over time (line)
+            const timeCtx = document.getElementById('timeChart');
+            const timeLabels = Object.keys(ticketsByDate);
+            const timeCounts = Object.values(ticketsByDate);
+            if (timeCtx && timeLabels.length) {
+                new Chart(timeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            label: 'Tickets per day',
+                            data: timeCounts,
+                            borderColor: '#6610f2',
+                            backgroundColor: 'rgba(102, 16, 242, 0.1)',
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

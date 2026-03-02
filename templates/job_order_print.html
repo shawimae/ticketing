@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Order - Ticket {{ ticket_id }}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #212529;
+            line-height: 1.5;
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+        }
+        @page {
+            /* Short bond paper: 8.5" x 11" (width x height) */
+            size: 8.5in 11in;
+            margin: 0;
+        }
+        /* Screen: compact view – same size as print, narrow column, small gap between slips */
+        .so-screen-wrap {
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        .so-page {
+            /* Match print size on screen so it's not a big white canvas */
+            width: 8.5in;
+            height: 5.5in;
+            padding: 0.5in;
+            margin: 0;
+            flex-shrink: 0;
+        }
+        .so-page.so-page--vertical {
+            width: 8.5in;
+            height: 5.5in;
+            padding: 0.5in;
+        }
+        .so-page.so-page--vertical .so-main { flex-direction: column; gap: 6px; }
+        .so-page.so-page--vertical .so-main-left { flex: none; }
+        .so-page.so-page--vertical .so-main-right { flex: none; }
+        .so-border {
+            border: 1px solid #000; /* match sample border */
+            padding: 6px 10px 10px;
+        }
+
+        .so-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            gap: 8px;
+        }
+        .so-logo-block img {
+            height: 45px;
+            max-width: 160px;
+            object-fit: contain;
+        }
+        .so-header-text {
+            flex: 1;
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.78rem;
+        }
+        .so-header-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+            width: 100%;
+            margin-top: 1px;
+        }
+        .so-copy-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .so-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin: 0 0 2px 0;
+        }
+        .so-jo-line,
+        .so-ticket-line {
+            font-size: 0.78rem;
+        }
+
+        .so-main {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .so-main-left,
+        .so-main-right {
+            flex: 1;
+        }
+        .so-main-left {
+            flex-basis: 55%;
+        }
+        .so-main-right {
+            flex-basis: 45%;
+        }
+        .so-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 0.75rem;
+        }
+        .so-col {
+            width: 48%;
+        }
+        .so-field {
+            display: flex;
+            margin-bottom: 1px;
+        }
+        .so-label {
+            min-width: 88px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .so-value {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            padding: 0 2px 0;
+            font-size: 0.75rem;
+        }
+        .so-value--no-border {
+            border-bottom: none;
+        }
+
+        .so-products {
+            margin: 3px 0 2px;
+        }
+        .so-products-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-bottom: 1px;
+        }
+        .so-products table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+            border: 1px solid #000;
+        }
+        .so-products th,
+        .so-products td {
+            padding: 2px 3px;
+            text-align: left;
+            border-right: 1px solid #000;
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+        }
+        .so-products th:last-child,
+        .so-products td:last-child {
+            border-right: none;
+        }
+        .so-products th {
+            font-weight: 600;
+            border-bottom: 1px solid #000;
+        }
+        .so-products td {
+            height: 28px;
+            vertical-align: top;
+        }
+
+        .so-preventive {
+            font-size: 0.72rem;
+            margin: 2px 0 1px;
+        }
+        .so-checkbox {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border: 1px solid #000;
+            margin: 0 2px 0 6px;
+        }
+
+        .so-text-block {
+            flex: 1;
+            font-size: 0.72rem;
+            margin-bottom: 2px;
+        }
+        .so-text-label {
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+        .so-text-area {
+            border: none;
+            border-bottom: 1px solid #777;
+            min-height: 18px;
+            padding: 0 2px 0;
+            white-space: pre-wrap;
+            font-size: 0.7rem;
+        }
+        .so-text-block:nth-of-type(2) .so-text-area {
+            min-height: 22px;
+        }
+
+        .so-bottom-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            margin-top: 4px;
+        }
+        .so-bottom-col {
+            width: 49%;
+        }
+        .so-bottom-field {
+            display: flex;
+            margin-bottom: 1px;
+        }
+        .so-bottom-label {
+            min-width: 64px;
+            font-weight: 600;
+        }
+        .so-bottom-value {
+            flex: 1;
+            border-bottom: 1px solid #777;
+        }
+        .so-signature-line {
+            margin-top: 24px; /* extra space for actual signature */
+            border-top: 1px solid #777;
+            text-align: center;
+            padding-top: 4px;
+            padding-bottom: 2px;
+            font-size: 0.65rem;
+        }
+
+        .no-print {
+            margin-top: 8px;
+            padding-top: 4px;
+            border-top: 1px dashed #ccc;
+            text-align: right;
+        }
+        .btn-print,
+        .btn-back {
+            padding: 6px 10px;
+            margin-left: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: none;
+            border-radius: 4px;
+            border: 1px solid #0d6efd;
+        }
+        .btn-print {
+            background: #0d6efd;
+            color: #fff;
+            border: none;
+        }
+        .btn-back {
+            color: #0d6efd;
+            background: #fff;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+            }
+            .so-screen-wrap {
+                max-width: none;
+                padding: 0;
+                gap: 0;
+                display: block;
+            }
+            .so-page {
+                /* Two slips stacked on one 8.5" x 11" sheet */
+                width: 8.5in;
+                height: 5.5in;
+                padding: 0.5in;
+                max-width: none;
+                max-height: none;
+                page-break-inside: avoid;
+            }
+            .so-page.so-page--vertical {
+                width: 8.5in;
+                height: 5.5in;
+                max-width: none;
+                max-height: none;
+                padding: 0.5in;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="so-screen-wrap">
+    <!-- Company Copy -->
+    <div class="so-page so-copy-first{% if vertical %} so-page--vertical{% endif %}">
+        <div class="so-border">
+            <div class="so-header">
+                <div class="so-logo-block">
+                    <img src="{{ url_for('static', filename='images/jdmt_blue_logo.png') }}" alt="JDMT Information Technology Services">
+                </div>
+                <div class="so-header-text">
+                    <p class="so-title">Service Order</p>
+                    <p class="so-jo-line"> {{ job_order or '—' }}</p>
+                    <div class="so-header-meta">
+                        <span class="so-ticket-line">Date: {{ date_val or '—' }}</span>
+                        <span class="so-copy-label">Company Copy</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-main">
+                <div class="so-main-left">
+                    <div class="so-row">
+                        <div class="so-col">
+                            <div class="so-field">
+                                <div class="so-label">Name of Customer:</div>
+                                <div class="so-value">{{ store_name or ' ' }}</div>
+                            </div>
+                            <div class="so-field">
+                                <div class="so-label">Contact Number:</div>
+                                <div class="so-value">{{ contact_number or ' ' }}</div>
+                            </div>
+                        </div>
+                        <div class="so-col">
+                            <div class="so-field">
+                                <div class="so-label">Hardware:</div>
+                                <div class="so-value">&nbsp;</div>
+                            </div>
+                            <div class="so-field">
+                                <div class="so-label">Software:</div>
+                                <div class="so-value">&nbsp;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="so-field">
+                        <div class="so-label">Address:</div>
+                        <div class="so-value">&nbsp;</div>
+                    </div>
+                    <div class="so-products">
+                        <div class="so-products-title">Equipment / Product</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Product</th>
+                                    <th style="width: 25%;">Model No.</th>
+                                    <th style="width: 25%;">Serial No.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="so-preventive">
+                        Preventive Maintenance:
+                        <span class="so-checkbox"></span>Yes
+                        <span class="so-checkbox"></span>No
+                    </div>
+                </div>
+                <div class="so-main-right">
+                    <div class="so-text-block">
+                        <div class="so-text-label">Service Reported:</div>
+                        <div class="so-text-area">{{ subject or reported_concern or ' ' }}</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Service Done:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Finding/s:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Recommendation:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-bottom-row">
+                <div class="so-bottom-col">
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Attended by:</div>
+                        <div class="so-bottom-value">{{ assigned_to or ' ' }}</div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Time In:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Time Out:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                </div>
+                <div class="so-bottom-col">
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Labor Charge:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Parts:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-signature-line">
+                        Customer Signature over Printed Name
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Copy -->
+    <div class="so-page{% if vertical %} so-page--vertical{% endif %}">
+        <div class="so-border">
+            <div class="so-header">
+                <div class="so-logo-block">
+                    <img src="{{ url_for('static', filename='images/jdmt_blue_logo.png') }}" alt="JDMT Information Technology Services">
+                </div>
+                <div class="so-header-text">
+                    <p class="so-title">Service Order</p>
+                    <p class="so-jo-line">{{ job_order or '—' }}</p>
+                    <div class="so-header-meta">
+                        <span class="so-ticket-line">Date: {{ date_val or '—' }}</span>
+                        <span class="so-copy-label">Customer Copy</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-main">
+                <div class="so-main-left">
+                    <div class="so-row">
+                        <div class="so-col">
+                            <div class="so-field">
+                                <div class="so-label">Name of Customer:</div>
+                                <div class="so-value">{{ store_name or ' ' }}</div>
+                            </div>
+                            <div class="so-field">
+                                <div class="so-label">Contact Number:</div>
+                                <div class="so-value">{{ contact_number or ' ' }}</div>
+                            </div>
+                        </div>
+                        <div class="so-col">
+                            <div class="so-field">
+                                <div class="so-label">Hardware:</div>
+                                <div class="so-value">&nbsp;</div>
+                            </div>
+                            <div class="so-field">
+                                <div class="so-label">Software:</div>
+                                <div class="so-value">&nbsp;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="so-field">
+                        <div class="so-label">Address:</div>
+                        <div class="so-value">&nbsp;</div>
+                    </div>
+                    <div class="so-products">
+                        <div class="so-products-title">Equipment / Product</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Product</th>
+                                    <th style="width: 25%;">Model No.</th>
+                                    <th style="width: 25%;">Serial No.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="so-preventive">
+                        Preventive Maintenance:
+                        <span class="so-checkbox"></span>Yes
+                        <span class="so-checkbox"></span>No
+                    </div>
+                </div>
+                <div class="so-main-right">
+                    <div class="so-text-block">
+                        <div class="so-text-label">Service Reported:</div>
+                        <div class="so-text-area">{{ subject or reported_concern or ' ' }}</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Service Done:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Finding/s:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                    <div class="so-text-block">
+                        <div class="so-text-label">Recommendation:</div>
+                        <div class="so-text-area">&nbsp;</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-bottom-row">
+                <div class="so-bottom-col">
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Attended by:</div>
+                        <div class="so-bottom-value">{{ assigned_to or ' ' }}</div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Time In:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Time Out:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                </div>
+                <div class="so-bottom-col">
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Labor Charge:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-bottom-field">
+                        <div class="so-bottom-label">Parts:</div>
+                        <div class="so-bottom-value"></div>
+                    </div>
+                    <div class="so-signature-line">
+                        Customer Signature over Printed Name
+                    </div>
+                </div>
+            </div>
+
+            <div class="no-print">
+                <button type="button" onclick="window.print();" class="btn-print">Print</button>
+                <a href="{{ url_for('home', _anchor='tickets') }}" class="btn-back">Back to tickets</a>
+                {% if not vertical %}
+                <a href="{{ request.path }}?vertical=1" class="btn-back" style="margin-left: 4px;">Print vertically (portrait)</a>
+                {% elif vertical %}
+                <a href="{{ request.path }}" class="btn-back" style="margin-left: 4px;">Standard (landscape)</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div><!-- .so-screen-wrap -->
+
+    <script>
+        window.addEventListener('load', function() {
+            if (window.location.search.indexOf('print=1') !== -1) {
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>

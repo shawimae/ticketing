@@ -1,0 +1,29 @@
+<header class="top-nav">
+  <div class="brand">
+    <a href="{{ url_for('home') }}" class="brand-logo-link">
+      <img
+        src="{{ url_for('static', filename='images/jdmt-logo.png') }}"
+        alt="JDMT Information Technology Services"
+        class="brand-logo"
+      />
+    </a>
+  </div>
+  <nav class="top-nav-links">
+    {% if session.get('user_id') %}
+    <div class="user-info">
+      {% if session.get('user_role') == 'super_admin' %}
+      <span class="user-role-badge super-admin">Super Admin</span>
+      {% elif session.get('user_role') == 'admin' %}
+      <span class="user-role-badge admin">Admin</span>
+      {% else %}
+      <span class="user-role-badge end-user">User</span>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('logout') }}">Logout</a>
+    {% else %}
+    <a href="{{ url_for('home') }}"></a>
+    <a href="{{ url_for('login') }}" class="primary-link">Login</a>
+    {% endif %}
+  </nav>
+</header>
+
